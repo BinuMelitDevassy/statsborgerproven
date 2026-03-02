@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Statsborgerprøven – 100 spørsmål</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; line-height: 1.4; }
+    .card { max-width: 900px; margin: 0 auto; border: 1px solid #ddd; border-radius: 12px; padding: 18px 18px; }
+    .top { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .badge { font-size: 13px; padding: 4px 10px; border: 1px solid #ddd; border-radius: 999px; }
+    h1 { font-size: 18px; margin: 0 0 10px 0; }
+    .q { font-size: 18px; margin: 10px 0 12px; }
+    .opts { margin: 0; padding: 0; list-style: none; }
+    .opt { margin: 10px 0; padding: 10px 12px; border: 1px solid #e2e2e2; border-radius: 10px; }
+    .opt:hover { background: #fafafa; }
+    .row { display:flex; gap:10px; margin-top: 14px; flex-wrap:wrap; }
+    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #222; background: #222; color: #fff; cursor:pointer; }
+    button[disabled] { opacity: .45; cursor:not-allowed; }
+    .secondary { background: #fff; color: #222; }
+    .feedback { margin-top: 14px; padding: 12px; border-radius: 10px; border: 1px solid #ddd; }
+    .ok { border-color: #b7e4c7; background: #f3fff7; }
+    .bad { border-color: #ffccd5; background: #fff5f7; }
+    .vocab { margin-top: 10px; font-size: 14px; }
+    .vocab ul { margin: 6px 0 0 18px; }
+    .small { font-size: 13px; color: #555; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="top">
+      <div class="badge" id="progress">Spørsmål 1 / 100</div>
+      <div class="badge" id="topic">Tema: —</div>
+    </div>
+
+    <h1>Statsborgerprøven – øving</h1>
+    <div class="small">Velg ett svar. Trykk <b>Sjekk svar</b>. Trykk <b>Neste</b> for neste spørsmål.</div>
+
+    <div class="q" id="question"></div>
+
+    <ul class="opts" id="options"></ul>
+
+    <div class="row">
+      <button class="secondary" id="checkBtn">Sjekk svar</button>
+      <button id="nextBtn" disabled>Neste</button>
+      <button class="secondary" id="restartBtn">Start på nytt</button>
+    </div>
+
+    <div id="feedback" class="feedback" style="display:none;"></div>
+  </div>
+
+<script>
+const questions = [
+  // --- Utdanning, kompetanse og arbeidsliv ---
+  {topic:"Skole og utdanning", q:"Hva er grunnskolen i Norge?", options:["Obligatorisk skole for barn (1.–10. trinn)","Skole for voksne som allerede har jobb","Universitet og høyskole"], a:0,
+   vocab:[["obligatorisk","mandatory"],["grunnskole","primary & lower secondary school"],["trinn","grade/year"]]},
+
+  {topic:"Skole og utdanning", q:"Hva betyr 'videregående opplæring'?", options:["Skole etter grunnskolen (ofte 3 år)","Barnehage for små barn","Kun kurs på nett"], a:0,
+   vocab:[["videregående","upper secondary"],["opplæring","education/training"],["etter","after"]]},
+
+  {topic:"Skole og utdanning", q:"Hva er barnehage?", options:["Tilbud for barn før skolealder","Yrkesfaglig skole for voksne","Offentlig kontor for skatt"], a:0,
+   vocab:[["barnehage","kindergarten"],["skolealder","school age"],["tilbud","service/offer"]]},
+
+  {topic:"Skole og utdanning", q:"Hvem har ansvar for grunnskolen i kommunen?", options:["Kommunen","Stortinget alene","FN"], a:0,
+   vocab:[["kommune","municipality"],["ansvar","responsibility"],["grunnskole","primary/lower secondary"]]},
+
+  {topic:"Skole og utdanning", q:"Hva er SFO?", options:["Skolefritidsordning før/etter skoletid for småtrinnet","Sykeforsikring for voksne","Et politisk parti"], a:0,
+   vocab:[["skolefritidsordning","after-school program"],["skoletid","school hours"],["småtrinnet","lower grades"]]},
+
+  {topic:"Arbeidsliv", q:"Hva betyr 'arbeidskontrakt'?", options:["Avtale mellom arbeidstaker og arbeidsgiver","En muntlig lov i familien","Et brev fra banken"], a:0,
+   vocab:[["arbeidskontrakt","employment contract"],["avtale","agreement"],["arbeidsgiver","employer"]]},
+
+  {topic:"Arbeidsliv", q:"Hva er 'arbeidstid'?", options:["Tiden du jobber","Tiden du sover","Tiden du er på ferie"], a:0,
+   vocab:[["arbeidstid","working hours"],["ferie","vacation"],["tiden","the time"]]},
+
+  {topic:"Arbeidsliv", q:"Hva betyr 'overtid'?", options:["Arbeid utover avtalt arbeidstid","Arbeid i barnehage","Arbeid bare i helger"], a:0,
+   vocab:[["overtid","overtime"],["utover","beyond"],["avtalt","agreed"]]},
+
+  {topic:"Arbeidsliv", q:"Hva er et 'fagforbund'?", options:["En organisasjon som ivaretar arbeidstakeres interesser","En skole for elektrikere","Et sykehus"], a:0,
+   vocab:[["fagforbund","trade union"],["ivareta","safeguard"],["interesser","interests"]]},
+
+  {topic:"Arbeidsliv", q:"Hva betyr 'HMS'?", options:["Helse, miljø og sikkerhet","Hus, mat og strøm","Høy, medium, svak"], a:0,
+   vocab:[["helse","health"],["miljø","environment"],["sikkerhet","safety"]]},
+
+  {topic:"Kritisk tenkning og digital dømmekraft", q:"Hva er 'kildekritikk'?", options:["Å vurdere om en kilde er troverdig","Å kopiere alt fra internett","Å alltid stole på sosiale medier"], a:0,
+   vocab:[["kildekritikk","source criticism"],["troverdig","credible"],["vurdere","evaluate"]]},
+
+  {topic:"Kritisk tenkning og digital dømmekraft", q:"Hva bør du gjøre før du deler nyheter på nett?", options:["Sjekke flere kilder","Dele med en gang","Bare lese overskriften"], a:0,
+   vocab:[["dele","share"],["kilder","sources"],["overskrift","headline"]]},
+
+  {topic:"Kritisk tenkning og digital dømmekraft", q:"Hva er 'personvern'?", options:["Beskyttelse av personlige opplysninger","En type pass","En del av skatt"], a:0,
+   vocab:[["personvern","privacy"],["opplysninger","information/data"],["beskyttelse","protection"]]},
+
+  {topic:"Kritisk tenkning og digital dømmekraft", q:"Hva betyr 'sterkt passord'?", options:["Langt og vanskelig å gjette","Bare navnet ditt","123456"], a:0,
+   vocab:[["passord","password"],["gjette","guess"],["sterkt","strong"]]},
+
+  {topic:"Kritisk tenkning og digital dømmekraft", q:"Hva er phishing?", options:["Forsøk på å lure deg til å gi fra deg passord/bankinfo","En offentlig tjeneste","En type vaksine"], a:0,
+   vocab:[["lure","trick"],["bankinfo","bank information"],["forsøk","attempt"]]},
+
+  // --- Familie, helse og hverdagsliv ---
+  {topic:"Ny i Norge", q:"Hva er Folkeregisteret?", options:["Register over personer som bor i Norge","Register over biler","Register over fisk"], a:0,
+   vocab:[["folkeregister","population register"],["personer","people"],["bor","live/reside"]]},
+
+  {topic:"Ny i Norge", q:"Hva bruker man BankID til?", options:["Sikker innlogging og signering digitalt","Å bestille pizza","Å betale kontant i butikk"], a:0,
+   vocab:[["innlogging","login"],["signering","signing"],["sikker","secure"]]},
+
+  {topic:"Ny i Norge", q:"Hva er Skatteetaten?", options:["Myndigheten som har ansvar for skatt","En privat bank","Et sykehus"], a:0,
+   vocab:[["skatt","tax"],["myndighet","authority"],["ansvar","responsibility"]]},
+
+  {topic:"Ny i Norge", q:"Hva er NAV?", options:["Velferdsetaten (arbeid og ytelser)","En matbutikk","Et flyselskap"], a:0,
+   vocab:[["velferd","welfare"],["ytelser","benefits"],["arbeid","work"]]},
+
+  {topic:"Ny i Norge", q:"Hva er 'fastlege'?", options:["Din faste lege i kommunehelsetjenesten","En lege bare på sykehus","En privat trener"], a:0,
+   vocab:[["fastlege","GP (family doctor)"],["faste","regular"],["helsetjeneste","health service"]]},
+
+  {topic:"Familieliv", q:"Hva er barnetrygd?", options:["Støtte til familier med barn","Skatt for barn","Skoleavgift"], a:0,
+   vocab:[["barnetrygd","child benefit"],["støtte","support/benefit"],["familier","families"]]},
+
+  {topic:"Familieliv", q:"Hva betyr 'foreldreansvar'?", options:["Ansvar for barnets omsorg og oppdragelse","Ansvar for naboens barn","Bare økonomisk ansvar"], a:0,
+   vocab:[["foreldreansvar","parental responsibility"],["omsorg","care"],["oppdragelse","upbringing"]]},
+
+  {topic:"Familieliv", q:"Hva er barnevernets oppgave?", options:["Å hjelpe og beskytte barn som har det vanskelig","Å bestemme skolekarakterer","Å dele ut pass"], a:0,
+   vocab:[["barnevern","child welfare services"],["beskytte","protect"],["vanskelig","difficult"]]},
+
+  {topic:"Familieliv", q:"Hva er permisjon ved fødsel?", options:["Fri fra jobb i en periode for å ta vare på barn","Straff fra arbeidsgiver","Et lån fra banken"], a:0,
+   vocab:[["permisjon","leave"],["periode","period"],["ta vare på","take care of"]]},
+
+  {topic:"Familieliv", q:"Hva betyr 'likestilling'?", options:["Kvinner og menn har like rettigheter og muligheter","At alle må være enige","At bare menn bestemmer"], a:0,
+   vocab:[["likestilling","gender equality"],["rettigheter","rights"],["muligheter","opportunities"]]},
+
+  {topic:"Fritid", q:"Hva er en frivillig organisasjon?", options:["En organisasjon der folk jobber uten lønn","En bedrift med høy lønn","En offentlig etat"], a:0,
+   vocab:[["frivillig","voluntary"],["uten lønn","without pay"],["organisasjon","organization"]]},
+
+  {topic:"Fritid", q:"Hva betyr 'dugnad'?", options:["Felles, frivillig arbeid for fellesskapet","Betalt overtid","Privat ferie"], a:0,
+   vocab:[["dugnad","community volunteer work"],["fellesskap","community"],["felles","shared/common"]]},
+
+  {topic:"Fritid", q:"Hvor kan du ofte låne bøker gratis?", options:["På biblioteket","På flyplassen","På bensinstasjonen"], a:0,
+   vocab:[["låne","borrow"],["gratis","free"],["bibliotek","library"]]},
+
+  {topic:"Fritid", q:"Hva er et idrettslag?", options:["En klubb for sport og aktivitet","Et politisk møte","Et forsikringsselskap"], a:0,
+   vocab:[["idrettslag","sports club"],["klubb","club"],["aktivitet","activity"]]},
+
+  {topic:"Fritid", q:"Hva er 'allemannsretten'?", options:["Rett til å ferdes i naturen med hensyn","Rett til å gå inn i private hus","Rett til å parkere hvor som helst"], a:0,
+   vocab:[["allemannsretten","right to roam"],["ferdes","move/travel"],["hensyn","consideration"]]},
+
+  {topic:"Helse", q:"Hva betyr 'egenandel' i helsevesenet?", options:["Beløp du betaler selv for behandling","Lønn du får fra NAV","Skatt på mat"], a:0,
+   vocab:[["egenandel","co-payment"],["behandling","treatment"],["beløp","amount"]]},
+
+  {topic:"Helse", q:"Hva er 113 i Norge?", options:["Nødnummer for ambulanse","Nødnummer for brann","Telefonnummer til bibliotek"], a:0,
+   vocab:[["nødnummer","emergency number"],["ambulanse","ambulance"],["brann","fire"]]},
+
+  {topic:"Helse", q:"Hva er 110 i Norge?", options:["Nødnummer for brannvesen","Nødnummer for politi","Nødnummer for taxi"], a:0,
+   vocab:[["brannvesen","fire brigade"],["politi","police"],["nødnummer","emergency number"]]},
+
+  {topic:"Helse", q:"Hva er 112 i Norge?", options:["Nødnummer for politi","Nødnummer for legevakt","Nødnummer for tog"], a:0,
+   vocab:[["politi","police"],["legevakt","emergency clinic"],["nødnummer","emergency number"]]},
+
+  {topic:"Helse", q:"Hva er folkehelse?", options:["Helsen til befolkningen samlet","Bare trening på gym","Kun sykehusdrift"], a:0,
+   vocab:[["folkehelse","public health"],["befolkning","population"],["samlet","overall"]]},
+
+  {topic:"Personlig økonomi", q:"Hva er et budsjett?", options:["Plan for inntekter og utgifter","En type skatt","En kontrakt for jobb"], a:0,
+   vocab:[["budsjett","budget"],["inntekter","income"],["utgifter","expenses"]]},
+
+  {topic:"Personlig økonomi", q:"Hva betyr 'rente'?", options:["Pris for å låne penger","Ekstra ferie","En type forsikring"], a:0,
+   vocab:[["rente","interest rate"],["låne","borrow"],["penger","money"]]},
+
+  {topic:"Personlig økonomi", q:"Hva er 'egenkapital' ved boligkjøp?", options:["Penger du har selv (ikke lån)","Skatt du betaler senere","Gavekort fra butikk"], a:0,
+   vocab:[["egenkapital","equity/down payment"],["boligkjøp","home purchase"],["lån","loan"]]},
+
+  {topic:"Personlig økonomi", q:"Hva betyr 'inkasso'?", options:["Inndriving av ubetalt gjeld","Gratis penger fra staten","Lån uten rente"], a:0,
+   vocab:[["inkasso","debt collection"],["gjeld","debt"],["ubetalt","unpaid"]]},
+
+  {topic:"Personlig økonomi", q:"Hva er 'skatt'?", options:["Penger du betaler til staten/kommunen","Penger du får i lønn","Rabatt i butikk"], a:0,
+   vocab:[["skatt","tax"],["staten","the state"],["kommune","municipality"]]},
+
+  {topic:"Retten til et fritt og selvstendig liv", q:"Hva er tvangsekteskap?", options:["Ekteskap der en eller begge blir presset","Ekteskap etter lang dating","Ekteskap i kirke"], a:0,
+   vocab:[["tvang","coercion"],["presset","pressured"],["ekteskap","marriage"]]},
+
+  {topic:"Retten til et fritt og selvstendig liv", q:"Hva betyr 'selvbestemmelse'?", options:["Rett til å bestemme over eget liv","At foreldrene bestemmer alt","At naboen bestemmer"], a:0,
+   vocab:[["selvbestemmelse","self-determination"],["eget","own"],["bestemme","decide"]]},
+
+  {topic:"Retten til et fritt og selvstendig liv", q:"Hva er negativ sosial kontroll?", options:["Press og kontroll fra familie/miljø som begrenser frihet","Vanlige regler på skole","Skatt fra kommunen"], a:0,
+   vocab:[["sosial kontroll","social control"],["begrense","limit"],["frihet","freedom"]]},
+
+  {topic:"Retten til et fritt og selvstendig liv", q:"Hva er vold i nære relasjoner?", options:["Vold mellom personer i familie/partnerforhold","Vold i en film","Vold på idrettsbanen"], a:0,
+   vocab:[["nære relasjoner","close relationships"],["vold","violence"],["partner","partner/spouse"]]},
+
+  {topic:"Retten til et fritt og selvstendig liv", q:"Hvem kan du kontakte ved akutt fare?", options:["Politiet (112) / nødetater","Bare en venn","Kun sosiale medier"], a:0,
+   vocab:[["akutt","acute/urgent"],["fare","danger"],["nødetater","emergency services"]]},
+
+  // --- Norge før og nå ---
+  {topic:"Dette er Norge", q:"Hva heter Norges hovedstad?", options:["Oslo","Bergen","Trondheim"], a:0,
+   vocab:[["hovedstad","capital"],["heter","is called"],["Norge","Norway"]]},
+
+  {topic:"Dette er Norge", q:"Hva kalles den norske valutaen?", options:["Kroner (NOK)","Euro","Dollar"], a:0,
+   vocab:[["valuta","currency"],["krone","krone"],["kalles","is called"]]},
+
+  {topic:"Dette er Norge", q:"Hva betyr 'velferdsstat'?", options:["Staten gir tjenester som skole og helse til alle","Kun private tjenester","Ingen skatt"], a:0,
+   vocab:[["velferdsstat","welfare state"],["tjenester","services"],["alle","everyone"]]},
+
+  {topic:"Dette er Norge", q:"Hvilket organ vedtar lover i Norge?", options:["Stortinget","Kongen alene","Kommunestyret i Oslo"], a:0,
+   vocab:[["vedta","pass/adopt"],["lover","laws"],["Stortinget","Parliament"]]},
+
+  {topic:"Dette er Norge", q:"Hva er 'fylke'?", options:["Et regionalt nivå mellom stat og kommune","Et nabolag i byen","Et privat selskap"], a:0,
+   vocab:[["fylke","county"],["regionalt","regional"],["nivå","level"]]},
+
+  {topic:"Historie", q:"Når ble Norge en egen stat med grunnlov i moderne tid?", options:["1814","1945","1905"], a:0,
+   vocab:[["grunnlov","constitution"],["egen stat","independent state"],["moderne","modern"]]},
+
+  {topic:"Historie", q:"Hva skjedde i 1905?", options:["Unionen med Sverige ble oppløst","Norge ble medlem av EU","Oljefunnet startet"], a:0,
+   vocab:[["union","union"],["oppløst","dissolved"],["Sverige","Sweden"]]},
+
+  {topic:"Historie", q:"Hva handler 2. verdenskrig (for Norge) ofte om?", options:["Okkuperasjon 1940–1945","Vikingtiden","EU-avstemningen"], a:0,
+   vocab:[["okkuperasjon","occupation"],["verdenskrig","world war"],["ofte","often"]]},
+
+  {topic:"Historie", q:"Hva er 'vikingtiden'?", options:["En historisk periode ca. 800–1050","En moderne politisk periode","En type ferie"], a:0,
+   vocab:[["historisk","historical"],["periode","period"],["viking","Viking"]]},
+
+  {topic:"Historie", q:"Hva betyr 'industrialiserings' (industrialiseringsperioden)?", options:["Overgang til fabrikker og maskiner i produksjon","Overgang til håndverk","Overgang til jakt"], a:0,
+   vocab:[["industrialiserings","industrialization"],["fabrikk","factory"],["produksjon","production"]]},
+
+  {topic:"Menneskerettigheter og demokrati", q:"Hva er demokrati?", options:["Folkets rett til å velge representanter","At én person bestemmer alt","At militæret bestemmer"], a:0,
+   vocab:[["demokrati","democracy"],["representanter","representatives"],["velge","choose/elect"]]},
+
+  {topic:"Menneskerettigheter og demokrati", q:"Hva er ytringsfrihet?", options:["Rett til å si meningene dine innen loven","Rett til å true andre","Rett til å lyve i retten"], a:0,
+   vocab:[["ytringsfrihet","freedom of speech"],["meninger","opinions"],["innen","within"]]},
+
+  {topic:"Menneskerettigheter og demokrati", q:"Hva er rettsstaten?", options:["Lover gjelder for alle, og domstolene er uavhengige","Bare politiet bestemmer","Lover gjelder bare for noen"], a:0,
+   vocab:[["rettsstat","rule of law"],["uavhengige","independent"],["domstol","court"]]},
+
+  {topic:"Menneskerettigheter og demokrati", q:"Hva er likhet for loven?", options:["Alle behandles likt av lovverket","Rike har egne lover","Barn har ingen rettigheter"], a:0,
+   vocab:[["likhet","equality"],["lovverk","legal system"],["behandles","are treated"]]},
+
+  {topic:"Menneskerettigheter og demokrati", q:"Hva er stemmerett?", options:["Rett til å stemme i valg","Rett til gratis buss","Rett til ekstra ferie"], a:0,
+   vocab:[["stemmerett","right to vote"],["valg","election"],["stemme","vote"]]},
+
+  {topic:"Bærekraft", q:"Hva betyr bærekraftig utvikling?", options:["Å dekke behov i dag uten å ødelegge for framtiden","Å bruke mest mulig ressurser nå","Å slutte med all teknologi"], a:0,
+   vocab:[["bærekraft","sustainability"],["utvikling","development"],["framtiden","the future"]]},
+
+  {topic:"Bærekraft", q:"Hva er et viktig klimatiltak?", options:["Redusere utslipp av klimagasser","Øke utslipp av CO₂","Kaste mer plast i naturen"], a:0,
+   vocab:[["utslipp","emissions"],["klimagasser","greenhouse gases"],["redusere","reduce"]]},
+
+  {topic:"Bærekraft", q:"Hva betyr 'kildesortering'?", options:["Sortere avfall (plast, papir, mat)","Blande alt avfall","Brenne alt hjemme"], a:0,
+   vocab:[["kildesortering","waste sorting"],["avfall","waste"],["sortere","sort"]]},
+
+  {topic:"Bærekraft", q:"Hva er 'fornybar energi'?", options:["Energi fra sol, vind, vann","Energi fra olje alltid","Energi fra kull bare"], a:0,
+   vocab:[["fornybar","renewable"],["energi","energy"],["vind","wind"]]},
+
+  {topic:"Bærekraft", q:"Hva er biologisk mangfold?", options:["Variasjon av arter i naturen","Bare én type plante","Kun dyr i zoo"], a:0,
+   vocab:[["biologisk mangfold","biodiversity"],["arter","species"],["variasjon","variation"]]},
+
+  // --- Fortsett med flere spørsmål (100 totalt) ---
+];
+
+// For å holde svaret her komplett og faktisk 100 spørsmål,
+// legger vi til resten programmatisk (fast mønster) med relevante temaer.
+// Spørsmålene under er fortsatt ekte og relevante, men generert i samme stil.
+
+const extra = [
+  // Arbeidsliv / rettigheter
+  ["Arbeidsliv","Hva betyr 'stillingsprosent'?",["Hvor stor del av full jobb du jobber","Hvor mye du trener","Hvor mange barn du har"],0,[["stillingsprosent","work percentage"],["full jobb","full-time"],["del","part"]]],
+  ["Arbeidsliv","Hva er en 'tariffavtale'?",["Avtale om lønn/arbeidsvilkår","Pass for reise","Skatteregel for mat"],0,[["tariffavtale","collective agreement"],["lønn","salary"],["vilkår","conditions"]]],
+  ["Arbeidsliv","Hva betyr 'sykemelding'?",["Dokument fra lege når du er syk","Brev fra banken","Skolebevis"],0,[["sykemelding","sick leave note"],["lege","doctor"],["dokument","document"]]],
+  ["Arbeidsliv","Hva er 'arbeidsmiljøloven'?",["Lov som beskytter arbeidstakere","Lov om fiske","Lov om pass"],0,[["arbeidsmiljøloven","Working Environment Act"],["beskytter","protects"],["arbeidstaker","employee"]]],
+  ["Arbeidsliv","Hva er 'feriepenger'?",["Penger du får i forbindelse med ferie","Penger du betaler til NAV","Straff for fravær"],0,[["feriepenger","holiday pay"],["forbindelse","in connection"],["fravær","absence"]]],
+
+  // Ny i Norge / offentlige tjenester
+  ["Ny i Norge","Hva er en 'time' hos offentlig kontor?",["Avtalt møte/avtale","En bussbillett","En skatt"],0,[["time","appointment"],["avtalt","scheduled"],["møte","meeting"]]],
+  ["Ny i Norge","Hva brukes 'MinID' til?",["Digital innlogging til offentlige tjenester","Å betale kontant","Å parkere gratis"],0,[["innlogging","login"],["offentlige tjenester","public services"],["digital","digital"]]],
+  ["Ny i Norge","Hva er 'kommunehelsetjenesten'?",["Helsehjelp i kommunen (fastlege, helsestasjon)","Kun private klinikker","Kun sykehus"],0,[["helsehjelp","health care"],["helsestasjon","health clinic"],["kommune","municipality"]]],
+  ["Ny i Norge","Hva er 'helseID'/digital helsetjeneste ofte knyttet til?",["Sikker tilgang til helsetjenester og informasjon","Kjøp av mat","Treningskort"],0,[["tilgang","access"],["helsetjeneste","health service"],["informasjon","information"]]],
+  ["Ny i Norge","Hva er 'introduksjonsprogrammet'?",["Program for nyankomne med norsk og samfunnskunnskap","Et TV-program","Et banklån"],0,[["introduksjonsprogram","introduction program"],["nyankomne","newly arrived"],["samfunnskunnskap","social studies"]]],
+
+  // Familieliv / barn / likestilling
+  ["Familieliv","Hva er 'foreldrepermisjon'?",["Permisjon ved fødsel/adopsjon","Permisjon for ferie","Permisjon for shopping"],0,[["foreldrepermisjon","parental leave"],["fødsel","birth"],["adopsjon","adoption"]]],
+  ["Familieliv","Hva er 'samtykke'?",["Et frivillig ja","Et tvunget nei","En lov i kommunen"],0,[["samtykke","consent"],["frivillig","voluntary"],["tvunget","forced"]]],
+  ["Familieliv","Hva betyr 'samboer'?",["Person du bor sammen med i et parforhold","Kollega på jobb","En lærer"],0,[["samboer","cohabitant"],["bor sammen","live together"],["parforhold","relationship"]]],
+  ["Familieliv","Hva er vanlig skoleplikt i Norge?",["Barn skal gå på skole (grunnskole)","Barn kan velge helt fritt uten skole","Bare privat skole er lov"],0,[["skoleplikt","compulsory schooling"],["grunnskole","primary/lower secondary"],["lov","law"]]],
+  ["Familieliv","Hva er et viktig prinsipp i oppdragelse i Norge?",["Barns rettigheter og medbestemmelse","Barn skal aldri si sin mening","Bare straff fungerer"],0,[["oppdragelse","upbringing"],["rettigheter","rights"],["medbestemmelse","participation"]]],
+
+  // Helse
+  ["Helse","Hva er 'legevakt'?",["Hjelp når fastlegen er stengt","Et apotek","En skole"],0,[["legevakt","urgent care"],["stengt","closed"],["hjelp","help"]]],
+  ["Helse","Hva er vaksinasjon?",["Beskyttelse mot sykdom","En type forsikring","En skatt"],0,[["vaksinasjon","vaccination"],["beskyttelse","protection"],["sykdom","illness"]]],
+  ["Helse","Hva er psykisk helse?",["Hvordan vi har det mentalt","Kun fysisk trening","Kun matvaner"],0,[["psykisk","mental"],["mentalt","mentally"],["helse","health"]]],
+  ["Helse","Hva betyr 'pasientrettigheter'?",["Rettigheter du har som pasient","Rett til gratis fly","Rett til å bryte loven"],0,[["pasient","patient"],["rettigheter","rights"],["behandling","treatment"]]],
+  ["Helse","Hva kan du gjøre for å få helsehjelp raskere ved akutt fare?",["Ringe nødnummer 113/112/110","Sende e-post","Vente i flere dager"],0,[["raskere","faster"],["akutt","urgent"],["nødnummer","emergency number"]]],
+
+  // Personlig økonomi
+  ["Personlig økonomi","Hva er 'lønnsslipp'?",["Oversikt over lønn og trekk","Et pass","Et busskort"],0,[["lønnsslipp","pay slip"],["trekk","deductions"],["oversikt","overview"]]],
+  ["Personlig økonomi","Hva betyr 'trekk' på lønn?",["Beløp som trekkes (skatt, osv.)","Ekstra bonus","Gratis penger"],0,[["trekk","deduction"],["beløp","amount"],["skatt","tax"]]],
+  ["Personlig økonomi","Hva er 'forsikring'?",["Avtale som gir økonomisk trygghet ved skade","En type skole","En kommunelov"],0,[["forsikring","insurance"],["trygghet","security"],["skade","damage"]]],
+  ["Personlig økonomi","Hva er et boliglån?",["Lån for å kjøpe bolig","Lån for å kjøpe mat","Lån for å kjøpe bussbillett"],0,[["boliglån","mortgage"],["kjøpe","buy"],["bolig","home"]]],
+  ["Personlig økonomi","Hva betyr 'avdrag'?",["Nedbetaling av lånet","Rente","Skatt på mat"],0,[["avdrag","principal payment"],["nedbetaling","repayment"],["lån","loan"]]],
+
+  // Retten til et fritt liv
+  ["Retten til et fritt og selvstendig liv","Hva betyr 'diskriminering'?",["Urettferdig forskjellsbehandling","Høflig oppførsel","Gratis tjenester"],0,[["diskriminering","discrimination"],["forskjellsbehandling","unequal treatment"],["urettferdig","unfair"]]],
+  ["Retten til et fritt og selvstendig liv","Hva er 'likeverd'?",["At alle mennesker har samme verdi","At alle må være like","At noen er mer verdt"],0,[["likeverd","equal worth"],["mennesker","people"],["verdi","value"]]],
+  ["Retten til et fritt og selvstendig liv","Hva kan du gjøre hvis du opplever vold?",["Kontakt politi/hjelpetjenester","Holde det hemmelig alltid","Straffe deg selv"],0,[["opplever","experience"],["hjelpetjenester","support services"],["kontakt","contact"]]],
+  ["Retten til et fritt og selvstendig liv","Hva er et krisesenter?",["Sted som hjelper personer utsatt for vold","Et treningssenter","Et bibliotek"],0,[["krisesenter","crisis shelter"],["utsatt","exposed/victim"],["hjelper","helps"]]],
+  ["Retten til et fritt og selvstendig liv","Hva betyr 'frihet' i et demokrati?",["At du kan leve og mene innen loven","At du kan gjøre hva som helst uten regler","At bare staten er fri"],0,[["frihet","freedom"],["demokrati","democracy"],["regler","rules"]]],
+
+  // Dette er Norge / styresett
+  ["Dette er Norge","Hva er regjeringens rolle?",["Å styre landet og gjennomføre politikk","Å dømme i retten","Å telle stemmer i valg"],0,[["regjering","government"],["gjennomføre","implement"],["politikk","policy"]]],
+  ["Dette er Norge","Hva gjør domstolene?",["Dømmer i saker etter loven","Lager lover","Bestemmer skatter i kommunen"],0,[["domstol","court"],["dømme","judge"],["saker","cases"]]],
+  ["Dette er Norge","Hva er en kommune?",["Lokalt nivå som tilbyr tjenester","Et land i EU","En privat bedrift"],0,[["lokalt","local"],["tilbyr","provides"],["tjenester","services"]]],
+  ["Dette er Norge","Hva er et valg?",["Når innbyggere stemmer på representanter","Når banken gir lån","Når du bytter jobb"],0,[["valg","election"],["stemmer","vote"],["representanter","representatives"]]],
+  ["Dette er Norge","Hva er en politisk debatt?",["Diskusjon om samfunn og politikk","En fotballkamp","En privat chat"],0,[["debatt","debate"],["diskusjon","discussion"],["samfunn","society"]]],
+
+  // Historie / demokrati
+  ["Historie","Hva er 17. mai i Norge?",["Grunnlovsdagen","Nasjonal sørgedag","Valgdagen"],0,[["grunnlovsdag","Constitution Day"],["nasjonal","national"],["feire","celebrate"]]],
+  ["Historie","Hva betyr 'frigjøring' i 1945?",["Slutten på okkupasjonen","Starten på union med Sverige","Oppdagelsen av olje"],0,[["frigjøring","liberation"],["slutten","the end"],["okkupasjon","occupation"]]],
+  ["Historie","Hva er 'folkestyre'?",["Et annet ord for demokrati","Et annet ord for diktatur","Et annet ord for monarki"],0,[["folkestyre","rule by the people"],["demokrati","democracy"],["diktatur","dictatorship"]]],
+  ["Historie","Hva betyr 'monarki' i Norge?",["Kongefamilie som symbol, men demokrati styrer","At kongen bestemmer alt","At Norge er en republikk"],0,[["monarki","monarchy"],["symbol","symbol"],["styrer","governs"]]],
+  ["Historie","Hva betyr 'republikk'?",["Stat uten konge","Stat med konge","Stat uten lover"],0,[["republikk","republic"],["uten","without"],["konge","king"]]],
+
+  // Menneskerettigheter og demokrati
+  ["Menneskerettigheter og demokrati","Hva er religionsfrihet?",["Rett til å tro eller ikke tro","Plikt til én religion","Forbud mot tro"],0,[["religionsfrihet","freedom of religion"],["tro","believe"],["plikt","duty"]]],
+  ["Menneskerettigheter og demokrati","Hva er diskrimineringsvern?",["Beskyttelse mot diskriminering","Rett til å diskriminere","Plikt til å forskjellsbehandle"],0,[["vern","protection"],["diskriminering","discrimination"],["beskyttelse","protection"]]],
+  ["Menneskerettigheter og demokrati","Hva er pressefrihet?",["Frihet for medier til å informere og kritisere","Forbud mot aviser","Bare staten kan skrive"],0,[["pressefrihet","freedom of the press"],["medier","media"],["kritisere","criticize"]]],
+  ["Menneskerettigheter og الديمقrat i","Hva betyr 'maktfordeling'?",["Makt deles mellom Storting, regjering og domstoler","All makt hos én person","All makt hos kommunen"],0,[["maktfordeling","separation of powers"],["deles","is shared"],["domstoler","courts"]]],
+  ["Menneskerettigheter og demokrati","Hva er en grunnlov?",["Landets viktigste lov","En lokal regel i borettslag","En muntlig tradisjon"],0,[["grunnlov","constitution"],["viktigste","most important"],["lov","law"]]],
+
+  // Bærekraft
+  ["Bærekraft","Hva er en viktig grunn til å spare energi?",["Mindre utslipp og lavere kostnader","Mer forurensning","Høyere strømregning"],0,[["spare","save"],["energi","energy"],["kostnader","costs"]]],
+  ["Bærekraft","Hva betyr 'gjenbruk'?",["Bruke ting om igjen","Kaste alt","Kjøpe nytt hele tiden"],0,[["gjenbruk","reuse"],["om igjen","again"],["kaste","throw away"]]],
+  ["Bærekraft","Hva er 'klima'?",["Gjennomsnittlig vær over tid","Været i dag","Temperaturen i kjøleskap"],0,[["klima","climate"],["gjennomsnittlig","average"],["over tid","over time"]]],
+  ["Bærekraft","Hva er en 'ressurs'?",["Noe vi kan bruke (vann, skog, energi)","Bare penger i banken","Kun datamaskiner"],0,[["ressurs","resource"],["skog","forest"],["vann","water"]]],
+  ["Bærekraft","Hva kan du gjøre hjemme for miljøet?",["Sortere avfall og redusere matsvinn","Kaste batterier i naturen","La vannet renne alltid"],0,[["matsvinn","food waste"],["redusere","reduce"],["sortere","sort"]]],
+];
+
+// Legg til "extra" slik at vi ender på 100 spørsmål totalt.
+while (questions.length < 100) {
+  const i = questions.length - 25; // start etter de første 25
+  const item = extra[i % extra.length];
+  questions.push({topic:item[0], q:item[1], options:item[2], a:item[3], vocab:item[4]});
+}
+
+// --- App state ---
+let idx = 0;
+let answered = false;
+
+const elQ = document.getElementById("question");
+const elOpts = document.getElementById("options");
+const elProgress = document.getElementById("progress");
+const elTopic = document.getElementById("topic");
+const elFeedback = document.getElementById("feedback");
+const btnCheck = document.getElementById("checkBtn");
+const btnNext = document.getElementById("nextBtn");
+const btnRestart = document.getElementById("restartBtn");
+
+function render() {
+  answered = false;
+  btnNext.disabled = true;
+  elFeedback.style.display = "none";
+  elFeedback.className = "feedback";
+
+  const q = questions[idx];
+  elProgress.textContent = `Spørsmål ${idx + 1} / ${questions.length}`;
+  elTopic.textContent = `Tema: ${q.topic}`;
+  elQ.textContent = q.q;
+
+  elOpts.innerHTML = "";
+  q.options.forEach((opt, i) => {
+    const li = document.createElement("li");
+    li.className = "opt";
+    li.innerHTML = `
+      <label style="display:flex; gap:10px; cursor:pointer;">
+        <input type="radio" name="opt" value="${i}" />
+        <span>${opt}</span>
+      </label>
+    `;
+    elOpts.appendChild(li);
+  });
+}
+
+function getSelectedIndex() {
+  const checked = document.querySelector('input[name="opt"]:checked');
+  return checked ? Number(checked.value) : -1;
+}
+
+function showFeedback(isCorrect, selectedIdx) {
+  const q = questions[idx];
+  const correctText = q.options[q.a];
+  const selectedText = selectedIdx >= 0 ? q.options[selectedIdx] : "(ingen valgt)";
+
+  elFeedback.style.display = "block";
+  elFeedback.classList.add(isCorrect ? "ok" : "bad");
+
+  const vocabHtml = `
+    <div class="vocab">
+      <b>Viktige ord:</b>
+      <ul>
+        ${q.vocab.map(([no,en]) => `<li><b>${no}</b> – ${en}</li>`).join("")}
+      </ul>
+    </div>
+  `;
+
+  if (isCorrect) {
+    elFeedback.innerHTML = `
+      <b>Riktig ✅</b><br/>
+      Du svarte: <i>${selectedText}</i>
+      ${vocabHtml}
+    `;
+  } else {
+    elFeedback.innerHTML = `
+      <b>Feil ❌</b><br/>
+      Du svarte: <i>${selectedText}</i><br/>
+      <b>Riktig svar:</b> ${correctText}
+      ${vocabHtml}
+    `;
+  }
+}
+
+btnCheck.addEventListener("click", () => {
+  if (answered) return;
+  const selected = getSelectedIndex();
+  const q = questions[idx];
+  const isCorrect = (selected === q.a);
+  showFeedback(isCorrect, selected);
+  answered = true;
+  btnNext.disabled = false;
+});
+
+btnNext.addEventListener("click", () => {
+  if (!answered) return;
+  idx = Math.min(idx + 1, questions.length - 1);
+  render();
+});
+
+btnRestart.addEventListener("click", () => {
+  idx = 0;
+  render();
+});
+
+// Start
+render();
+</script>
+</body>
+</html>
