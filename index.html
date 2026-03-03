@@ -886,7 +886,7 @@
       if (vocab.length > 0) {
         vocabHtml = `
           <div class="vocab-section">
-            <div class="vocab-title">Viktige ord:</div>
+            <div class="vocab-title">📚 Viktige ord / Important words:</div>
             <ul class="vocab-list">
               ${vocab.map(([no, en]) => `<li><b>${no}</b> – ${en}</li>`).join('')}
             </ul>
@@ -894,9 +894,35 @@
         `;
       }
       
+      // Enhanced: Bilingual explanations
       let explanationHtml = '';
-      if (question.explanation) {
-        explanationHtml = `<p><b>Forklaring:</b> ${question.explanation}</p>`;
+      if (question.explanation_no || question.explanation) {
+        const norwegianExpl = question.explanation_no || question.explanation;
+        explanationHtml = `
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #ddd;">
+            <p><b>🇳🇴 Forklaring:</b> ${norwegianExpl}</p>
+        `;
+        
+        if (question.explanation_en) {
+          explanationHtml += `<p style="margin-top: 8px;"><b>🇬🇧 Explanation:</b> ${question.explanation_en}</p>`;
+        }
+        
+        explanationHtml += `</div>`;
+      }
+      
+      // Source link
+      let sourceLinkHtml = '';
+      if (question.source_link) {
+        sourceLinkHtml = `
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #ddd;">
+            <p style="font-size: 13px;">
+              <b>🔗 Kilde / Source:</b> 
+              <a href="${question.source_link}" target="_blank" style="color: #667eea; text-decoration: underline;">
+                ${question.source_link.replace('https://', '').split('/')[0]}
+              </a>
+            </p>
+          </div>
+        `;
       }
       
       if (isCorrect) {
@@ -906,6 +932,7 @@
           <p>Du svarte: <i>${correctAnswer}</i></p>
           ${explanationHtml}
           ${vocabHtml}
+          ${sourceLinkHtml}
         `;
       } else {
         feedbackBox.className = 'feedback-box incorrect';
@@ -914,6 +941,7 @@
           <p><b>Riktig svar:</b> ${correctAnswer}</p>
           ${explanationHtml}
           ${vocabHtml}
+          ${sourceLinkHtml}
         `;
       }
       
