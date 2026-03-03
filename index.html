@@ -536,11 +536,15 @@
     // ============================================
     // CONFIGURATION - REPLACE WITH YOUR VALUES
     // ============================================
-    const SUPABASE_URL = 'https://icpoxucvnoldkyvasstm.supabase.co'; // e.g., 'https://xxxxx.supabase.co'
+    const SUPABASE_URL = 'https://icpoxucvnoldkyvasstm.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_yc-pP_4Vc6F9MZhW2KHRdA_nXPncF7J';
 
     // Initialize Supabase client
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('Initializing Supabase with URL:', SUPABASE_URL);
+    console.log('Anon key length:', SUPABASE_ANON_KEY.length);
+    
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('✅ Supabase client initialized successfully');
 
     // ============================================
     // STATE MANAGEMENT
@@ -583,7 +587,9 @@
     // ============================================
     async function signUp(email, password, displayName) {
       try {
-        const { data, error } = await supabase.auth.signUp({
+        console.log('Starting signup with:', { email, hasPassword: !!password, displayName });
+        
+        const { data, error } = await supabaseClient.auth.signUp({
           email,
           password,
           options: {
@@ -591,11 +597,14 @@
           }
         });
 
+        console.log('Signup response:', { data, error });
+
         if (error) throw error;
 
         // Update profile with display name
         if (displayName && data.user) {
-          await supabase
+          console.log('Updating user profile with display name');
+          await supabaseClient
             .from('user_profiles')
             .update({ display_name: displayName })
             .eq('id', data.user.id);
@@ -604,6 +613,7 @@
         showMessage('authMessage', 'Registrering vellykket! Sjekk e-posten din for bekreftelse.');
         return { success: true };
       } catch (error) {
+        console.error('Signup error:', error);
         showMessage('authMessage', error.message, true);
         return { success: false, error };
       }
@@ -611,7 +621,7 @@
 
     async function signIn(email, password) {
       try {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
           email,
           password
         });
@@ -629,14 +639,14 @@
     }
 
     async function signOut() {
-      await supabase.auth.signOut();
+      await supabaseClient.auth.signOut();
       currentUser = null;
       userProfile = null;
       showScreen('auth');
     }
 
     async function loadUserProfile() {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('user_profiles')
         .select('*')
         .eq('id', currentUser.id)
@@ -674,7 +684,7 @@
       
       try {
         // Fetch all questions
-        const { data: allQuestions, error } = await supabase
+        const { data: allQuestions, error } = await supabaseClient
           .from('questions')
           .select('*')
           .eq('is_active', true);
@@ -691,7 +701,7 @@
         questions = shuffleArray(allQuestions).slice(0, 20);
         
         // Create quiz session
-        const { data: session, error: sessionError } = await supabase
+        const { data: session, error: sessionError } = await supabaseClient
           .from('quiz_sessions')
           .insert({
             user_id: currentUser.id,
@@ -770,7 +780,8 @@
       document.getElementById('questionText').textContent = question.question;
       
       // Shuffle and render options
-      const options = JSON.parse(question.options);
+      // Supabase returns JSONB as JavaScript objects/arrays, not strings
+      const options = Array.isArray(question.options) ? question.options : JSON.parse(question.options);
       const correctAnswer = question.correct_answer;
       
       const optionsWithIndex = options.map((opt, i) => ({ 
@@ -834,7 +845,7 @@
       });
       
       // Save answer to database
-      await supabase.from('quiz_answers').insert({
+      await supabaseClient.from('quiz_answers').insert({
         session_id: quizSession.id,
         question_id: question.id,
         user_answer: parseInt(selected.value),
@@ -867,9 +878,9 @@
 
     function showFeedback(isCorrect, question) {
       const feedbackBox = document.getElementById('feedbackBox');
-      const options = JSON.parse(question.options);
+      const options = Array.isArray(question.options) ? question.options : JSON.parse(question.options);
       const correctAnswer = options[question.correct_answer];
-      const vocab = question.vocab ? JSON.parse(question.vocab) : [];
+      const vocab = Array.isArray(question.vocab) ? question.vocab : (question.vocab ? JSON.parse(question.vocab) : []);
       
       let vocabHtml = '';
       if (vocab.length > 0) {
@@ -925,7 +936,7 @@
       const totalTime = Math.floor((Date.now() - startTime) / 1000);
       
       // Update quiz session
-      await supabase
+      await supabaseClient
         .from('quiz_sessions')
         .update({
           score: score,
@@ -977,7 +988,7 @@
       clearInterval(timerInterval);
       
       // Mark session as abandoned
-      await supabase
+      await supabaseClient
         .from('quiz_sessions')
         .update({ status: 'abandoned' })
         .eq('id', quizSession.id);
@@ -1001,9 +1012,12 @@
     });
 
     document.getElementById('signupBtn').addEventListener('click', async () => {
+      console.log('Signup button clicked');
       const email = document.getElementById('signupEmail').value;
       const password = document.getElementById('signupPassword').value;
       const name = document.getElementById('signupName').value;
+      
+      console.log('Form values:', { email, hasPassword: !!password, name });
       
       if (!email || !password) {
         showMessage('authMessage', 'Vennligst fyll ut alle felt!', true);
@@ -1047,7 +1061,7 @@
     // ============================================
     async function init() {
       // Check if user is already logged in
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabaseClient.auth.getSession();
       
       if (session) {
         currentUser = session.user;
@@ -1057,7 +1071,7 @@
       }
 
       // Listen for auth state changes
-      supabase.auth.onAuthStateChange((event, session) => {
+      supabaseClient.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_IN') {
           currentUser = session.user;
           showDashboard();
