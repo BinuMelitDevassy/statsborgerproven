@@ -366,6 +366,65 @@
       100% { transform: rotate(360deg); }
     }
 
+    /* Dictionary Tooltip */
+    .norwegian-word {
+      color: #667eea;
+      font-weight: 600;
+      cursor: help;
+      border-bottom: 2px dotted #667eea;
+      position: relative;
+      padding: 0 2px;
+      transition: all 0.2s;
+    }
+    .norwegian-word:hover {
+      background: #f0f4ff;
+      color: #5568d3;
+    }
+    .word-tooltip {
+      position: fixed;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      z-index: 10000;
+      max-width: 300px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .word-tooltip.show {
+      opacity: 1;
+    }
+    .word-tooltip-word {
+      font-weight: bold;
+      font-size: 16px;
+      margin-bottom: 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+      padding-bottom: 6px;
+    }
+    .word-tooltip-meaning {
+      font-size: 13px;
+      opacity: 0.95;
+    }
+    .dict-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-right: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .dict-badge:hover {
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+    }
+
     /* Utility */
     .hidden { display: none !important; }
     .mt-4 { margin-top: 24px; }
@@ -426,6 +485,12 @@
 
       <div class="dashboard">
         <h1 class="dashboard-title">Velkommen! 👋</h1>
+        
+        <div style="text-align: center; margin-bottom: 16px;">
+          <span class="dict-badge" title="Hover over Norwegian words to see translations!">
+            📖 Dictionary: <span id="dictionaryCount">0</span> words
+          </span>
+        </div>
         
         <div class="stats-grid">
           <div class="stat-card">
@@ -529,8 +594,16 @@
     </div>
   </div>
 
+  <!-- Dictionary Tooltip -->
+  <div id="wordTooltip" class="word-tooltip">
+    <div class="word-tooltip-word" id="tooltipWord"></div>
+    <div class="word-tooltip-meaning" id="tooltipMeaning"></div>
+  </div>
+
   <!-- Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Norwegian Dictionary (auto-generated) -->
+  <script src="norwegian_dictionary.js"></script>
   
   <script>
     // ============================================
@@ -559,6 +632,99 @@
     let timerInterval = null;
     let questionStartTime = null;
     let answers = [];
+    
+    // Dictionary loaded from norwegian_dictionary.js
+    // No need to fetch from database anymore!
+
+    // ============================================
+    // DICTIONARY FUNCTIONS
+    // ============================================
+    async function loadDictionary() {
+      try {
+        console.log('📚 Loading Norwegian dictionary...');
+        
+        // Check if dictionary was loaded from norwegian_dictionary.js
+        if (typeof norwegianDictionary === 'undefined' || !norwegianDictionary) {
+          console.warn('⚠️ Dictionary file not loaded, falling back to database...');
+          
+          // Fallback: Fetch from database
+          const { data: questionsData, error } = await supabaseClient
+            .from('questions')
+            .select('vocab')
+            .not('vocab', 'is', null);
+
+          if (error) throw error;
+
+          norwegianDictionary = {};
+          questionsData.forEach(q => {
+            const vocab = Array.isArray(q.vocab) ? q.vocab : (q.vocab ? JSON.parse(q.vocab) : []);
+            vocab.forEach(([norwegian, english]) => {
+              if (norwegian && english) {
+                norwegianDictionary[norwegian.toLowerCase()] = english;
+              }
+            });
+          });
+        }
+
+        console.log(`✅ Dictionary loaded with ${Object.keys(norwegianDictionary).length} words`);
+        return norwegianDictionary;
+      } catch (error) {
+        console.error('Error loading dictionary:', error);
+        return {};
+      }
+    }
+
+    // Make Norwegian words clickable with tooltips
+    function enhanceTextWithDictionary(text) {
+      if (!text || Object.keys(norwegianDictionary).length === 0) return text;
+      
+      // Common Norwegian words to highlight (from dictionary)
+      const words = Object.keys(norwegianDictionary);
+      
+      // Sort by length (longest first) to avoid partial matches
+      words.sort((a, b) => b.length - a.length);
+      
+      let enhancedText = text;
+      
+      words.forEach(word => {
+        // Match whole words only (case-insensitive)
+        const regex = new RegExp(`\\b(${word})\\b`, 'gi');
+        enhancedText = enhancedText.replace(regex, (match) => {
+          return `<span class="norwegian-word" data-word="${match.toLowerCase()}">${match}</span>`;
+        });
+      });
+      
+      return enhancedText;
+    }
+
+    // Show tooltip on hover
+    function setupTooltipListeners() {
+      const tooltip = document.getElementById('wordTooltip');
+      
+      document.addEventListener('mouseover', (e) => {
+        if (e.target.classList.contains('norwegian-word')) {
+          const word = e.target.dataset.word;
+          const meaning = norwegianDictionary[word];
+          
+          if (meaning) {
+            document.getElementById('tooltipWord').textContent = word;
+            document.getElementById('tooltipMeaning').textContent = `🇬🇧 ${meaning}`;
+            
+            // Position tooltip near mouse
+            const rect = e.target.getBoundingClientRect();
+            tooltip.style.left = `${rect.left}px`;
+            tooltip.style.top = `${rect.bottom + 5}px`;
+            tooltip.classList.add('show');
+          }
+        }
+      });
+      
+      document.addEventListener('mouseout', (e) => {
+        if (e.target.classList.contains('norwegian-word')) {
+          tooltip.classList.remove('show');
+        }
+      });
+    }
 
     // ============================================
     // SCREEN MANAGEMENT
@@ -672,6 +838,8 @@
         userProfile?.average_score ? `${Math.round(userProfile.average_score)}%` : '0%';
       document.getElementById('bestScore').textContent = 
         userProfile?.best_score ? `${Math.round((userProfile.best_score / 20) * 100)}%` : '0%';
+      document.getElementById('dictionaryCount').textContent = 
+        Object.keys(norwegianDictionary).length;
 
       showScreen('dashboard');
     }
@@ -776,8 +944,9 @@
       document.getElementById('progressFill').style.width = 
         `${((currentQuestionIndex) / 20) * 100}%`;
       
-      // Update question
-      document.getElementById('questionText').textContent = question.question;
+      // Update question with dictionary enhancement
+      const enhancedQuestion = enhanceTextWithDictionary(question.question);
+      document.getElementById('questionText').innerHTML = enhancedQuestion;
       
       // Shuffle and render options
       // Supabase returns JSONB as JavaScript objects/arrays, not strings
@@ -796,12 +965,13 @@
       optionsList.innerHTML = '';
       
       shuffledOptions.forEach((opt, i) => {
+        const enhancedOptionText = enhanceTextWithDictionary(opt.text);
         const li = document.createElement('li');
         li.className = 'option-item';
         li.innerHTML = `
           <label class="option-label">
             <input type="radio" name="answer" value="${i}" data-correct="${opt.isCorrect}" />
-            <span>${opt.text}</span>
+            <span>${enhancedOptionText}</span>
           </label>
         `;
         optionsList.appendChild(li);
@@ -888,19 +1058,20 @@
           <div class="vocab-section">
             <div class="vocab-title">📚 Viktige ord / Important words:</div>
             <ul class="vocab-list">
-              ${vocab.map(([no, en]) => `<li><b>${no}</b> – ${en}</li>`).join('')}
+              ${vocab.map(([no, en]) => `<li><span class="norwegian-word" data-word="${no.toLowerCase()}"><b>${no}</b></span> – ${en}</li>`).join('')}
             </ul>
           </div>
         `;
       }
       
-      // Enhanced: Bilingual explanations
+      // Enhanced: Bilingual explanations with dictionary
       let explanationHtml = '';
       if (question.explanation_no || question.explanation) {
         const norwegianExpl = question.explanation_no || question.explanation;
+        const enhancedExpl = enhanceTextWithDictionary(norwegianExpl);
         explanationHtml = `
           <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #ddd;">
-            <p><b>🇳🇴 Forklaring:</b> ${norwegianExpl}</p>
+            <p><b>🇳🇴 Forklaring:</b> ${enhancedExpl}</p>
         `;
         
         if (question.explanation_en) {
@@ -1088,6 +1259,10 @@
     // INITIALIZATION
     // ============================================
     async function init() {
+      // Load dictionary first
+      await loadDictionary();
+      setupTooltipListeners();
+      
       // Check if user is already logged in
       const { data: { session } } = await supabaseClient.auth.getSession();
       
